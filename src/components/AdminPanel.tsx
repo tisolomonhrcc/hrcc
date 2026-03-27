@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { LogOut, Upload, Plus, Trash2, Users, UserCheck, Globe, UserX, Clipboard } from 'lucide-react';
+import { LogOut, Upload, Plus, Trash2, Users, UserCheck, Globe, UserX, Clipboard, Download } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { supabase } from '../lib/supabase';
 import { Week, Programme, Student, Attendance, AttendanceStatus, Cohort } from '../types/database';
 import { useAuth } from '../contexts/AuthContext';
@@ -267,6 +268,39 @@ export function AdminPanel({ onNavigateToFrontend }: AdminPanelProps) {
     loadStudents();
   };
 
+  const handleExportAttendance = () => {
+    if (!selectedWeek) {
+      alert('Please select a week to export.');
+      return;
+    }
+
+    const currentWeek = weeks.find(w => w.id === selectedWeek);
+    const currentCohort = cohorts.find(c => c.id === selectedCohort);
+    
+    // Prepare data for export
+    const exportData = students.map(student => ({
+      'Name': student.name,
+      'Email': student.email || 'No email registered',
+      'Status': student.attendance?.status || 'ABSENT'
+    }));
+
+    if (exportData.length === 0) {
+      alert('No students to export.');
+      return;
+    }
+
+    // Create worksheet
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Attendance');
+
+    // Generate filename
+    const fileName = `Attendance_${currentWeek?.name.replace(/\s+/g, '_')}${currentCohort ? `_${currentCohort.name.replace(/\s+/g, '_')}` : ''}.xlsx`;
+
+    // Download file
+    XLSX.writeFile(workbook, fileName);
+  };
+
   const changeProgramme = async (studentId: string, newProgrammeId: string) => {
     if (!newProgrammeId) return;
 
@@ -519,6 +553,13 @@ export function AdminPanel({ onNavigateToFrontend }: AdminPanelProps) {
               >
                 <Upload className="w-4 h-4" />
                 Upload Attendance
+              </button>
+              <button
+                onClick={handleExportAttendance}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-sm"
+              >
+                <Download className="w-4 h-4" />
+                Export Attendance
               </button>
               {selectedStudentIds.size > 0 && (
                 <button
