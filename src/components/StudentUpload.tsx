@@ -48,46 +48,68 @@ export function StudentUpload({ programmes, onClose, onSuccess }: StudentUploadP
       const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as string[][];
 
       const students: StudentRow[] = [];
+      const seenEmailsInFile = new Set<string>();
+
       for (let i = 0; i < jsonData.length; i++) {
         const row = jsonData[i];
         if (row[0] && row[1]) {
-          students.push({
-            name: String(row[0]).trim(),
-            email: String(row[1]).trim().toLowerCase(),
-          });
+          const name = String(row[0]).trim();
+          const email = String(row[1]).trim().toLowerCase();
+          
+          if (name && email && !seenEmailsInFile.has(email)) {
+            students.push({ name, email });
+            seenEmailsInFile.add(email);
+          }
         }
       }
 
       if (students.length === 0) {
-        setError('No valid students found in the file');
+        setError('No valid or unique students found in the file');
         setUploading(false);
         return;
       }
 
-      const studentsToInsert = students.map((student) => ({
+      // Fetch existing students from the database to count actual new ones
+      const { data: existingStudents, error: fetchError } = await supabase
+        .from('students')
+        .select('email');
+
+      if (fetchError) throw fetchError;
+
+      const existingEmails = new Set(existingStudents?.map(s => s.email.toLowerCase()) || []);
+      const newStudents = students.filter(s => !existingEmails.has(s.email));
+      const duplicateCount = (jsonData.filter(r => r[0] && r[1]).length) - newStudents.length;
+
+      if (newStudents.length === 0) {
+        setError(`All students in this file are already registered (${duplicateCount} duplicates skipped)`);
+        setUploading(false);
+        return;
+      }
+
+      const studentsToInsert = newStudents.map((student) => ({
         name: student.name,
         email: student.email,
         programme_id: selectedProgramme,
       }));
 
-      const { data: insertedData, error: insertError } = await supabase
+      const { error: insertError } = await supabase
         .from('students')
         .upsert(studentsToInsert, {
           onConflict: 'email',
-          ignoreDuplicates: false,
-        })
-        .select();
+          ignoreDuplicates: true,
+        });
 
       if (insertError) {
         throw insertError;
       }
 
-      setSuccess(`Successfully uploaded ${students.length} students`);
+      setSuccess(`Successfully uploaded ${newStudents.length} new students. ${duplicateCount > 0 ? `${duplicateCount} duplicates were skipped.` : ''}`);
       setTimeout(() => {
         onSuccess();
-      }, 1500);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to upload students');
+      }, 2500);
+    } catch (err: any) {
+      console.error('Upload error:', err);
+      setError(err.message || 'Failed to upload students');
     } finally {
       setUploading(false);
     }

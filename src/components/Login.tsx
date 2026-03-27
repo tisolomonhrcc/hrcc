@@ -23,36 +23,45 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-lg shadow-md">
-        <div>
-          <img
-            src="https://hrccattendance.netlify.app/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Flogohr.b7d53c0a.jpg&w=2048&q=75"
-            alt="Logo"
-            className="mx-auto h-24 w-auto"
-          />
-          <h2 className="mt-6 text-center text-3xl font-bold text-[#091838]">
-            Admin Login
+    <div className="min-h-screen flex flex-col items-center justify-center bg-[#091838] px-4">
+      <div className="mb-8 text-center">
+        <h1 className="text-4xl font-bold text-white tracking-wider mb-2">
+          HR CERTIFICATION CENTRE
+        </h1>
+        <p className="text-gray-300 text-sm tracking-[0.2em] uppercase">
+          Professional Certification
+        </p>
+      </div>
+
+      <div className="max-w-md w-full bg-white rounded-xl shadow-2xl p-10">
+        <div className="text-center mb-10">
+          <h2 className="text-3xl font-bold text-[#091838] mb-2">
+            Admin Portal
           </h2>
+          <p className="text-gray-500 text-sm">
+            Enter your credentials to access the dashboard
+          </p>
         </div>
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="space-y-4">
+        
+        <form className="space-y-6" onSubmit={handleSubmit}>
+          <div className="space-y-5">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="email" className="block text-sm font-semibold text-[#091838] mb-1">
                 Email
               </label>
               <input
                 id="email"
                 name="email"
                 type="email"
+                placeholder="admin@hrcc.com"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#e51836] focus:border-[#e51836]"
+                className="block w-full px-4 py-3 border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#e51836] focus:border-transparent transition-all"
               />
             </div>
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="password" className="block text-sm font-semibold text-[#091838] mb-1">
                 Password
               </label>
               <input
@@ -62,23 +71,31 @@ export function Login() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#e51836] focus:border-[#e51836]"
+                className="block w-full px-4 py-3 border border-gray-200 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#e51836] focus:border-transparent transition-all"
               />
             </div>
           </div>
 
           {error && (
-            <div className="text-[#e51836] text-sm text-center">{error}</div>
+            <div className="bg-red-50 text-[#e51836] text-xs py-2 px-3 rounded-md text-center border border-red-100">
+              {error}
+            </div>
           )}
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#e51836] hover:bg-[#c41530] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#e51836] disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full py-3 px-4 rounded-lg text-white font-bold bg-[#e51836] hover:bg-[#d61632] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-red-500/20"
           >
-            {loading ? 'Signing in...' : 'Sign in'}
+            {loading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
+      </div>
+
+      <div className="mt-8 text-center">
+        <p className="text-gray-500 text-xs">
+          © {new Date().getFullYear()} HR Certification Centre. All rights reserved.
+        </p>
       </div>
     </div>
   );

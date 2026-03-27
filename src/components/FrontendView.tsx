@@ -38,7 +38,7 @@ export function FrontendView({ onLogoClick }: FrontendViewProps) {
   }, [selectedCohort]);
 
   useEffect(() => {
-    if (selectedProgramme !== 'all' && (searchQuery.trim() || selectedCohort !== 'all')) {
+    if (selectedCohort !== 'all' && (searchQuery.trim() || selectedCohort !== 'all')) {
       searchStudents();
     } else {
       setStudents([]);
@@ -94,7 +94,7 @@ export function FrontendView({ onLogoClick }: FrontendViewProps) {
   };
 
   const searchStudents = async () => {
-    if (selectedProgramme === 'all') {
+    if (selectedCohort === 'all') {
       setStudents([]);
       return;
     }
@@ -110,7 +110,11 @@ export function FrontendView({ onLogoClick }: FrontendViewProps) {
           cohort:cohorts!inner(name)
         )
       `)
-      .eq('programme_id', selectedProgramme);
+      .eq('programme.cohort_id', selectedCohort);
+
+    if (selectedProgramme !== 'all') {
+      query = query.eq('programme_id', selectedProgramme);
+    }
 
     if (searchQuery.trim()) {
       query = query.ilike('name', `%${searchQuery}%`);
@@ -191,26 +195,50 @@ export function FrontendView({ onLogoClick }: FrontendViewProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-white">
       <div className="max-w-4xl mx-auto p-6">
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <img
-            src="https://hrccattendance.netlify.app/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Flogohr.b7d53c0a.jpg&w=2048&q=75"
-            alt="Logo"
-            onClick={onLogoClick}
-            className="h-20 mx-auto mb-6 cursor-pointer hover:opacity-80 transition-opacity"
-          />
+        <div className="flex flex-col items-center mb-12">
+          <div className="flex items-center justify-between w-full mb-8">
+            <div className="bg-[#091838] p-2 rounded-lg shadow-md">
+              <img
+                src="https://hrccattendance.netlify.app/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Flogohr.b7d53c0a.jpg&w=2048&q=75"
+                alt="Logo"
+                onClick={onLogoClick}
+                className="h-12 cursor-pointer hover:opacity-80 transition-opacity"
+              />
+            </div>
+            
+            <div className="flex gap-3">
+              <div className="bg-[#e51836] text-white px-4 py-2 rounded-lg font-bold text-sm shadow-lg shadow-red-500/20">
+                {weeks.find(w => w.id === selectedWeek)?.name || 'Select Week'}
+              </div>
+              {selectedProgramme !== 'all' && (
+                <div className="bg-[#091838] text-white px-4 py-2 rounded-lg font-bold text-sm shadow-lg shadow-blue-500/20">
+                  {programmes.find(p => p.id === selectedProgramme)?.name}
+                </div>
+              )}
+            </div>
+          </div>
 
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <h1 className="text-4xl font-extrabold text-[#091838] mb-2 tracking-tight">
+            Attendance Portal
+          </h1>
+          <p className="text-gray-500 text-center max-w-md">
+            Welcome to the HRCC event. Please search for your name below to mark your attendance.
+          </p>
+        </div>
+
+        <div className="bg-gray-50 rounded-2xl p-8 mb-8 border border-gray-100">
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Select Week
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+                  Week
                 </label>
                 <select
                   value={selectedWeek}
                   onChange={(e) => setSelectedWeek(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#e51836]"
+                  className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#e51836] focus:border-transparent transition-all shadow-sm"
                 >
                   {weeks.map((week) => (
                     <option key={week.id} value={week.id}>
@@ -221,13 +249,13 @@ export function FrontendView({ onLogoClick }: FrontendViewProps) {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Filter by Cohort
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+                  Cohort
                 </label>
                 <select
                   value={selectedCohort}
                   onChange={(e) => setSelectedCohort(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#e51836]"
+                  className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#e51836] focus:border-transparent transition-all shadow-sm"
                 >
                   <option value="all">All Cohorts</option>
                   {cohorts.map((cohort) => (
@@ -239,13 +267,13 @@ export function FrontendView({ onLogoClick }: FrontendViewProps) {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Select Programme
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+                  Programme
                 </label>
                 <select
                   value={selectedProgramme}
                   onChange={(e) => setSelectedProgramme(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#e51836]"
+                  className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#e51836] focus:border-transparent transition-all shadow-sm"
                 >
                   <option value="all">Select a Programme</option>
                   {programmes.map((programme) => (
@@ -258,14 +286,14 @@ export function FrontendView({ onLogoClick }: FrontendViewProps) {
             </div>
 
             <div className="relative">
-              <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 ${selectedProgramme === 'all' ? 'text-gray-300' : 'text-gray-400'}`} />
+              <Search className={`absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 ${selectedCohort === 'all' ? 'text-gray-300' : 'text-gray-400'}`} />
               <input
                 type="text"
-                placeholder={selectedProgramme === 'all' ? "Please select a programme first..." : "Search student by name..."}
-                disabled={selectedProgramme === 'all'}
+                placeholder={selectedCohort === 'all' ? "Please select a cohort first..." : "Search student by name..."}
+                disabled={selectedCohort === 'all'}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#e51836] disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed"
+                className="w-full pl-12 pr-4 py-4 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#e51836] focus:border-transparent transition-all shadow-sm disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed text-lg"
               />
             </div>
           </div>

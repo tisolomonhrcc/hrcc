@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { LogOut, Upload, Plus, Filter, Trash2 } from 'lucide-react';
+import { LogOut, Upload, Plus, Filter, Trash2, Users, UserCheck, Globe, UserX } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Week, Programme, Student, Attendance, AttendanceStatus, Cohort } from '../types/database';
 import { useAuth } from '../contexts/AuthContext';
@@ -31,6 +31,13 @@ export function AdminPanel({ onNavigateToFrontend }: AdminPanelProps) {
   const [loading, setLoading] = useState(false);
   const [showStudentUpload, setShowStudentUpload] = useState(false);
   const [showAttendanceUpload, setShowAttendanceUpload] = useState(false);
+
+  const stats = {
+    total: students.length,
+    inPerson: students.filter(s => s.attendance?.status === 'IN_PERSON' || s.attendance?.status === 'HYBRID').length,
+    online: students.filter(s => s.attendance?.status === 'ONLINE').length,
+    absent: students.filter(s => !s.attendance || s.attendance.status === 'ABSENT').length,
+  };
 
   const handleAddWeek = async () => {
     const weekNumber = weeks.length + 1;
@@ -240,6 +247,39 @@ export function AdminPanel({ onNavigateToFrontend }: AdminPanelProps) {
     loadStudents();
   };
 
+  const changeProgramme = async (studentId: string, newProgrammeId: string) => {
+    if (!newProgrammeId) return;
+
+    const { error } = await supabase
+      .from('students')
+      .update({ programme_id: newProgrammeId })
+      .eq('id', studentId);
+
+    if (error) {
+      alert('Error changing programme: ' + error.message);
+      return;
+    }
+
+    loadStudents();
+  };
+
+  const deleteStudent = async (studentId: string, studentName: string) => {
+    const confirmed = window.confirm(`Are you sure you want to delete student "${studentName}"? This will also remove all their attendance records.`);
+    if (!confirmed) return;
+
+    const { error } = await supabase
+      .from('students')
+      .delete()
+      .eq('id', studentId);
+
+    if (error) {
+      alert('Error deleting student: ' + error.message);
+      return;
+    }
+
+    loadStudents();
+  };
+
   const getStatusColor = (status?: AttendanceStatus) => {
     switch (status) {
       case 'IN_PERSON':
@@ -392,6 +432,45 @@ export function AdminPanel({ onNavigateToFrontend }: AdminPanelProps) {
           </div>
         </div>
 
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-6 flex items-center gap-4">
+            <div className="p-3 bg-blue-50 rounded-lg">
+              <Users className="w-6 h-6 text-blue-600" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-500 font-medium">Total Students</p>
+              <h3 className="text-2xl font-bold text-gray-900">{stats.total}</h3>
+            </div>
+          </div>
+          <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-6 flex items-center gap-4">
+            <div className="p-3 bg-green-50 rounded-lg">
+              <UserCheck className="w-6 h-6 text-green-600" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-500 font-medium">In Person</p>
+              <h3 className="text-2xl font-bold text-gray-900">{stats.inPerson}</h3>
+            </div>
+          </div>
+          <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-6 flex items-center gap-4">
+            <div className="p-3 bg-purple-50 rounded-lg">
+              <Globe className="w-6 h-6 text-purple-600" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-500 font-medium">Online</p>
+              <h3 className="text-2xl font-bold text-gray-900">{stats.online}</h3>
+            </div>
+          </div>
+          <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-6 flex items-center gap-4">
+            <div className="p-3 bg-red-50 rounded-lg">
+              <UserX className="w-6 h-6 text-red-600" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-500 font-medium">Absent</p>
+              <h3 className="text-2xl font-bold text-gray-900">{stats.absent}</h3>
+            </div>
+          </div>
+        </div>
+
         {loading ? (
           <div className="text-center text-gray-600 py-8">Loading students...</div>
         ) : (
@@ -427,7 +506,19 @@ export function AdminPanel({ onNavigateToFrontend }: AdminPanelProps) {
                         {student.email}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {student.programme?.name}
+                        <select
+                          value={student.programme_id}
+                          onChange={(e) => changeProgramme(student.id, e.target.value)}
+                          className="px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-[#e51836] text-xs"
+                        >
+                          {programmes
+                            .filter(p => p.cohort_id === student.programme?.cohort_id)
+                            .map(p => (
+                              <option key={p.id} value={p.id}>
+                                {p.name}
+                              </option>
+                            ))}
+                        </select>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span
@@ -456,6 +547,13 @@ export function AdminPanel({ onNavigateToFrontend }: AdminPanelProps) {
                           className="text-blue-600 hover:text-blue-900"
                         >
                           Online
+                        </button>
+                        <button
+                          onClick={() => deleteStudent(student.id, student.name)}
+                          className="text-red-600 hover:text-red-900 ml-4"
+                          title="Delete student"
+                        >
+                          <Trash2 className="w-4 h-4 inline" />
                         </button>
                       </td>
                     </tr>
