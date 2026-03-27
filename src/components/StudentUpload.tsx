@@ -12,7 +12,7 @@ interface StudentUploadProps {
 
 interface StudentRow {
   name: string;
-  email: string;
+  email: string | null;
 }
 
 export function StudentUpload({ programmes, onClose, onSuccess }: StudentUploadProps) {
@@ -52,33 +52,41 @@ export function StudentUpload({ programmes, onClose, onSuccess }: StudentUploadP
 
       for (let i = 0; i < jsonData.length; i++) {
         const row = jsonData[i];
-        if (row[0] && row[1]) {
+        if (row[0]) {
           const name = String(row[0]).trim();
-          const email = String(row[1]).trim().toLowerCase();
+          const email = row[1] ? String(row[1]).trim().toLowerCase() : null;
           
-          if (name && email && !seenEmailsInFile.has(email)) {
+          if (name) {
+            // Only check for duplicates if email is provided
+            if (email && seenEmailsInFile.has(email)) continue;
+            
             students.push({ name, email });
-            seenEmailsInFile.add(email);
+            if (email) seenEmailsInFile.add(email);
           }
         }
       }
 
       if (students.length === 0) {
-        setError('No valid or unique students found in the file');
+        setError('No valid students found in the file');
         setUploading(false);
         return;
       }
 
-      // Fetch existing students from the database to count actual new ones
+      // Fetch existing students for this programme to check for duplicates by name and email
       const { data: existingStudents, error: fetchError } = await supabase
         .from('students')
-        .select('email');
+        .select('name, email')
+        .eq('programme_id', selectedProgramme);
 
       if (fetchError) throw fetchError;
 
-      const existingEmails = new Set(existingStudents?.map(s => s.email.toLowerCase()) || []);
-      const newStudents = students.filter(s => !existingEmails.has(s.email));
-      const duplicateCount = (jsonData.filter(r => r[0] && r[1]).length) - newStudents.length;
+      const existingSet = new Set(existingStudents?.map(s => `${s.name.toLowerCase().trim()}|${s.email?.toLowerCase().trim() || ''}`) || []);
+      
+      const newStudents = students.filter(s => {
+        const key = `${s.name.toLowerCase().trim()}|${s.email?.toLowerCase().trim() || ''}`;
+        return !existingSet.has(key);
+      });
+      const duplicateCount = (jsonData.filter(r => r[0]).length) - newStudents.length;
 
       if (newStudents.length === 0) {
         setError(`All students in this file are already registered (${duplicateCount} duplicates skipped)`);
@@ -94,10 +102,7 @@ export function StudentUpload({ programmes, onClose, onSuccess }: StudentUploadP
 
       const { error: insertError } = await supabase
         .from('students')
-        .upsert(studentsToInsert, {
-          onConflict: 'email',
-          ignoreDuplicates: true,
-        });
+        .insert(studentsToInsert);
 
       if (insertError) {
         throw insertError;

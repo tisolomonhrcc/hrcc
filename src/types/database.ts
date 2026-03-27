@@ -1,4 +1,4 @@
-export type ProgrammeType = 'aPHRi' | 'PHRi' | 'SPHRi' | 'UNKNOWN';
+export type ProgrammeType = 'aPHRi' | 'PHRi' | 'SPHRi' | 'Mentorship' | 'UNKNOWN';
 export type AttendanceStatus = 'ABSENT' | 'IN_PERSON' | 'ONLINE' | 'HYBRID';
 
 export interface Cohort {
@@ -18,9 +18,9 @@ export interface Programme {
 export interface Student {
   id: string;
   name: string;
-  email: string;
+  email: string | null;
   programme_id: string;
-  created_at: string;
+  created_at?: string;
   programme?: Programme;
 }
 
