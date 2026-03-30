@@ -55,6 +55,21 @@ export function OnlineAttendanceUpload({
   };
 
   const findMatches = (name: string, students: Student[]): Student[] => {
+    // Basic normalization: trim and convert to lowercase
+    const normalizedName = name.trim().toLowerCase();
+    
+    // First, try to find an exact match or a substring match among all students
+    const potentialMatches = students.filter(s => {
+      const studentName = s.name.toLowerCase();
+      return studentName === normalizedName || 
+             studentName.includes(normalizedName) || 
+             normalizedName.includes(studentName);
+    });
+
+    if (potentialMatches.length > 0) {
+      return potentialMatches.slice(0, 3);
+    }
+
     const fuse = new Fuse(students, {
       keys: ['name'],
       threshold: 0.4,
@@ -102,8 +117,16 @@ export function OnlineAttendanceUpload({
       const matchedStudents: Student[] = [];
 
       for (const name of names) {
+        const normalizedName = name.trim().toLowerCase();
+        
+        // Better exact matching: check for exact match or name containing/contained by
         const exactMatch = allStudents.find(
-          (s) => s.name.toLowerCase() === name.toLowerCase()
+          (s) => {
+            const studentName = s.name.toLowerCase();
+            return studentName === normalizedName || 
+                   studentName.split(' ').some(part => part === normalizedName) ||
+                   normalizedName.split(' ').some(part => part === studentName);
+          }
         );
 
         if (exactMatch) {
@@ -112,6 +135,9 @@ export function OnlineAttendanceUpload({
           const suggestions = findMatches(name, allStudents);
           if (suggestions.length > 0) {
             unmatched.push({ name, suggestions });
+          } else {
+            // Even if no fuzzy matches, still add to unmatched for manual lookup
+            unmatched.push({ name, suggestions: [] });
           }
         }
       }
@@ -126,7 +152,10 @@ export function OnlineAttendanceUpload({
 
         let newStatus: AttendanceStatus = 'ONLINE';
 
+        // If they were already marked as IN_PERSON, mark them as HYBRID
         if (existingAttendance?.status === 'IN_PERSON') {
+          newStatus = 'HYBRID';
+        } else if (existingAttendance?.status === 'HYBRID') {
           newStatus = 'HYBRID';
         }
 
@@ -176,6 +205,8 @@ export function OnlineAttendanceUpload({
         let newStatus: AttendanceStatus = 'ONLINE';
 
         if (existingAttendance?.status === 'IN_PERSON') {
+          newStatus = 'HYBRID';
+        } else if (existingAttendance?.status === 'HYBRID') {
           newStatus = 'HYBRID';
         }
 
@@ -289,11 +320,21 @@ export function OnlineAttendanceUpload({
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#e51836]"
                       >
                         <option value="">Skip this student</option>
-                        {unmatched.suggestions.map((student) => (
-                          <option key={student.id} value={student.id}>
-                            {student.name} ({student.email})
-                          </option>
-                        ))}
+                        {unmatched.suggestions.length > 0 ? (
+                          unmatched.suggestions.map((student) => (
+                            <option key={student.id} value={student.id}>
+                              {student.name} ({student.email})
+                            </option>
+                          ))
+                        ) : (
+                          <optgroup label="Search for a student">
+                            {allStudents.map((student) => (
+                              <option key={student.id} value={student.id}>
+                                {student.name} ({student.email})
+                              </option>
+                            ))}
+                          </optgroup>
+                        )}
                       </select>
                     </div>
                   ))}
