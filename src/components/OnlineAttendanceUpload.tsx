@@ -28,6 +28,8 @@ export function OnlineAttendanceUpload({
   const [unmatchedStudents, setUnmatchedStudents] = useState<UnmatchedStudent[]>([]);
   const [selectedMatches, setSelectedMatches] = useState<{ [key: string]: string }>({});
   const [allStudents, setAllStudents] = useState<Student[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 4;
 
   useEffect(() => {
     loadAllStudents();
@@ -73,6 +75,7 @@ export function OnlineAttendanceUpload({
     setError('');
     setSuccess('');
     setUnmatchedStudents([]);
+    setCurrentPage(1);
 
     try {
       const data = await file.arrayBuffer();
@@ -257,36 +260,62 @@ export function OnlineAttendanceUpload({
           ) : (
             <>
               <div className="space-y-4">
-                <h4 className="font-semibold text-[#091838]">
-                  Match Unrecognized Names ({unmatchedStudents.length})
-                </h4>
-                {unmatchedStudents.map((unmatched, index) => (
-                  <div key={index} className="border border-gray-200 rounded-lg p-4">
-                    <p className="font-medium text-gray-900 mb-2">
-                      "{unmatched.name}" not found
-                    </p>
-                    <label className="block text-sm text-gray-700 mb-2">
-                      Select matching student:
-                    </label>
-                    <select
-                      value={selectedMatches[unmatched.name] || ''}
-                      onChange={(e) =>
-                        setSelectedMatches({
-                          ...selectedMatches,
-                          [unmatched.name]: e.target.value,
-                        })
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#e51836]"
+                <div className="flex items-center justify-between">
+                  <h4 className="font-semibold text-[#091838]">
+                    Match Unrecognized Names ({unmatchedStudents.length})
+                  </h4>
+                  <span className="text-sm text-gray-500">
+                    Page {currentPage} of {Math.ceil(unmatchedStudents.length / itemsPerPage)}
+                  </span>
+                </div>
+                {unmatchedStudents
+                  .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                  .map((unmatched, index) => (
+                    <div key={index} className="border border-gray-200 rounded-lg p-4">
+                      <p className="font-medium text-gray-900 mb-2">
+                        "{unmatched.name}" not found
+                      </p>
+                      <label className="block text-sm text-gray-700 mb-2">
+                        Select matching student:
+                      </label>
+                      <select
+                        value={selectedMatches[unmatched.name] || ''}
+                        onChange={(e) =>
+                          setSelectedMatches({
+                            ...selectedMatches,
+                            [unmatched.name]: e.target.value,
+                          })
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#e51836]"
+                      >
+                        <option value="">Skip this student</option>
+                        {unmatched.suggestions.map((student) => (
+                          <option key={student.id} value={student.id}>
+                            {student.name} ({student.email})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ))}
+                
+                {unmatchedStudents.length > itemsPerPage && (
+                  <div className="flex justify-between items-center pt-2">
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1}
+                      className="px-3 py-1 text-sm border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 transition-colors"
                     >
-                      <option value="">Skip this student</option>
-                      {unmatched.suggestions.map((student) => (
-                        <option key={student.id} value={student.id}>
-                          {student.name} ({student.email})
-                        </option>
-                      ))}
-                    </select>
+                      Previous
+                    </button>
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.min(Math.ceil(unmatchedStudents.length / itemsPerPage), prev + 1))}
+                      disabled={currentPage === Math.ceil(unmatchedStudents.length / itemsPerPage)}
+                      className="px-3 py-1 text-sm border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                    >
+                      Next
+                    </button>
                   </div>
-                ))}
+                )}
               </div>
 
               {error && (
