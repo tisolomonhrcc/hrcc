@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { LogOut, Upload, Plus, Trash2, Users, UserCheck, Globe, UserX, Clipboard, Download } from 'lucide-react';
+import { LogOut, Upload, Plus, Trash2, Users, UserCheck, Globe, UserX, Clipboard, Download, ArrowRightLeft } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { supabase } from '../lib/supabase';
 import { Week, Programme, Student, Attendance, AttendanceStatus, Cohort } from '../types/database';
@@ -35,6 +35,7 @@ export function AdminPanel({ onNavigateToFrontend }: AdminPanelProps) {
   const [showStudentUpload, setShowStudentUpload] = useState(false);
   const [showPasteUpload, setShowPasteUpload] = useState(false);
   const [showAttendanceUpload, setShowAttendanceUpload] = useState(false);
+  const [movingStudentId, setMovingStudentId] = useState<string | null>(null);
 
   const stats = {
     total: students.length,
@@ -634,7 +635,7 @@ export function AdminPanel({ onNavigateToFrontend }: AdminPanelProps) {
                       <th className="px-4 py-3 text-left text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider">
                         Student
                       </th>
-                      <th className="hidden md:table-cell px-4 py-3 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider">
                         Programme
                       </th>
                       <th className="px-4 py-3 text-left text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider">
@@ -662,11 +663,11 @@ export function AdminPanel({ onNavigateToFrontend }: AdminPanelProps) {
                           <p className="text-[10px] text-gray-500 truncate">{student.email || 'No email'}</p>
                         </div>
                       </td>
-                        <td className="hidden md:table-cell px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
                           <select
                             value={student.programme_id}
                             onChange={(e) => changeProgramme(student.id, e.target.value)}
-                            className="px-2 py-1 bg-white border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-[#e51836] text-xs"
+                            className="w-full max-w-[120px] px-2 py-1 bg-white border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-[#e51836] text-[10px] md:text-xs"
                           >
                             {programmes
                               .filter(p => p.cohort_id === student.programme?.cohort_id)
@@ -684,6 +685,29 @@ export function AdminPanel({ onNavigateToFrontend }: AdminPanelProps) {
                         </td>
                         <td className="px-4 py-4 whitespace-nowrap text-right">
                           <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => {
+                                const newProgId = window.prompt(
+                                  `Move ${student.name} to another programme in ${student.programme?.cohort?.name}:\n\n` +
+                                  programmes
+                                    .filter(p => p.cohort_id === student.programme?.cohort_id)
+                                    .map(p => `${p.name}`).join(', ') + 
+                                  `\n\nEnter the new programme name exactly as shown:`
+                                );
+                                if (newProgId) {
+                                  const prog = programmes.find(p => p.cohort_id === student.programme?.cohort_id && p.name.toLowerCase() === newProgId.toLowerCase());
+                                  if (prog) {
+                                    changeProgramme(student.id, prog.id);
+                                  } else {
+                                    alert('Programme not found in this cohort.');
+                                  }
+                                }
+                              }}
+                              className="p-1.5 text-orange-600 hover:bg-orange-50 rounded transition-colors md:hidden"
+                              title="Move Programme"
+                            >
+                              <ArrowRightLeft className="w-4 h-4" />
+                            </button>
                             <button
                               onClick={() => updateAttendance(student.id, 'ABSENT')}
                               className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded transition-colors"

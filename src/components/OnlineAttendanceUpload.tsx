@@ -54,17 +54,35 @@ export function OnlineAttendanceUpload({
     }
   };
 
+  const normalizeName = (name: string): string => {
+    return name
+      .toLowerCase()
+      .replace(/\b(mr|mrs|ms|dr|prof|sir|madam)\.?\b/g, "") // Remove common titles
+      .replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "") // Remove punctuation
+      .replace(/\s{2,}/g, " ") // Normalize double spaces
+      .trim();
+  };
+
+  const isMatch = (name1: string, name2: string): boolean => {
+    const n1 = normalizeName(name1);
+    const n2 = normalizeName(name2);
+    
+    if (n1 === n2) return true;
+    if (n1.includes(n2) || n2.includes(n1)) return true;
+
+    // Check for reversed names (e.g. "John Doe" vs "Doe John")
+    const parts1 = n1.split(' ').sort().join(' ');
+    const parts2 = n2.split(' ').sort().join(' ');
+    if (parts1 === parts2) return true;
+
+    return false;
+  };
+
   const findMatches = (name: string, students: Student[]): Student[] => {
-    // Basic normalization: trim and convert to lowercase
-    const normalizedName = name.trim().toLowerCase();
+    const normalizedInput = normalizeName(name);
     
     // First, try to find an exact match or a substring match among all students
-    const potentialMatches = students.filter(s => {
-      const studentName = s.name.toLowerCase();
-      return studentName === normalizedName || 
-             studentName.includes(normalizedName) || 
-             normalizedName.includes(studentName);
-    });
+    const potentialMatches = students.filter(s => isMatch(name, s.name));
 
     if (potentialMatches.length > 0) {
       return potentialMatches.slice(0, 3);
@@ -72,8 +90,9 @@ export function OnlineAttendanceUpload({
 
     const fuse = new Fuse(students, {
       keys: ['name'],
-      threshold: 0.4,
+      threshold: 0.3, // More strict threshold for better matches
       distance: 100,
+      includeScore: true,
     });
 
     const results = fuse.search(name);
@@ -117,17 +136,7 @@ export function OnlineAttendanceUpload({
       const matchedStudents: Student[] = [];
 
       for (const name of names) {
-        const normalizedName = name.trim().toLowerCase();
-        
-        // Better exact matching: check for exact match or name containing/contained by
-        const exactMatch = allStudents.find(
-          (s) => {
-            const studentName = s.name.toLowerCase();
-            return studentName === normalizedName || 
-                   studentName.split(' ').some(part => part === normalizedName) ||
-                   normalizedName.split(' ').some(part => part === studentName);
-          }
-        );
+        const exactMatch = allStudents.find((s) => isMatch(name, s.name));
 
         if (exactMatch) {
           matchedStudents.push(exactMatch);
