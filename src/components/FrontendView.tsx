@@ -306,8 +306,14 @@ export function FrontendView({ onLogoClick }: FrontendViewProps) {
           {students.map((student) => (
             <div
               key={student.id}
-              className="bg-white border border-gray-100 p-4 md:p-6 rounded-xl shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+              className="relative bg-white border border-gray-100 p-4 md:p-6 rounded-xl shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
             >
+              {student.is_flagged && (
+                <div 
+                  className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-600 rounded-full border-2 border-white shadow-sm z-10" 
+                  title="Flagged Student"
+                />
+              )}
               <div className="min-w-0">
                  <h3 className="font-bold text-[#091838] truncate text-base md:text-lg">
                    {student.name}

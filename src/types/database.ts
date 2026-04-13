@@ -20,6 +20,7 @@ export interface Student {
   name: string;
   email: string | null;
   programme_id: string;
+  is_flagged: boolean;
   created_at?: string;
   programme?: Programme;
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { LogOut, Upload, Plus, Trash2, Users, UserCheck, Globe, UserX, Clipboard, Download, ArrowRightLeft } from 'lucide-react';
+import { LogOut, Upload, Plus, Trash2, Users, UserCheck, Globe, UserX, Clipboard, Download, ArrowRightLeft, Search, Flag } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { supabase } from '../lib/supabase';
 import { Week, Programme, Student, Attendance, AttendanceStatus, Cohort } from '../types/database';
@@ -36,6 +36,7 @@ export function AdminPanel({ onNavigateToFrontend }: AdminPanelProps) {
   const [showPasteUpload, setShowPasteUpload] = useState(false);
   const [showAttendanceUpload, setShowAttendanceUpload] = useState(false);
   const [movingStudentId, setMovingStudentId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const stats = {
     total: students.length,
@@ -144,7 +145,7 @@ export function AdminPanel({ onNavigateToFrontend }: AdminPanelProps) {
       loadStudents();
     }
     setSelectedStudentIds(new Set()); // Reset selection when filters change
-  }, [selectedWeek, selectedProgramme, selectedCohort]);
+  }, [selectedWeek, selectedProgramme, selectedCohort, searchQuery]);
 
   const loadWeeks = async () => {
     const { data } = await supabase
@@ -231,6 +232,10 @@ export function AdminPanel({ onNavigateToFrontend }: AdminPanelProps) {
       query = query.eq('programme_id', selectedProgramme);
     }
 
+    if (searchQuery) {
+      query = query.or(`name.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%`);
+    }
+
     const { data: studentsData } = await query;
 
     if (studentsData && selectedWeek) {
@@ -312,6 +317,20 @@ export function AdminPanel({ onNavigateToFrontend }: AdminPanelProps) {
 
     if (error) {
       alert('Error changing programme: ' + error.message);
+      return;
+    }
+
+    loadStudents();
+  };
+
+  const toggleFlag = async (studentId: string, currentFlagStatus: boolean) => {
+    const { error } = await supabase
+      .from('students')
+      .update({ is_flagged: !currentFlagStatus })
+      .eq('id', studentId);
+
+    if (error) {
+      alert('Error toggling flag: ' + error.message);
       return;
     }
 
@@ -530,6 +549,24 @@ export function AdminPanel({ onNavigateToFrontend }: AdminPanelProps) {
                     ))}
                   </select>
                 </div>
+
+                <div className="sm:col-span-2 lg:col-span-3">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                      Search Students
+                    </label>
+                  </div>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Search by name or email..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e51836] focus:border-transparent transition-all text-sm"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -658,9 +695,14 @@ export function AdminPanel({ onNavigateToFrontend }: AdminPanelProps) {
                           />
                         </td>
                         <td className="px-4 py-4">
-                        <div className="min-w-0">
-                          <p className="text-sm font-bold text-[#091838] truncate">{student.name}</p>
-                          <p className="text-[10px] text-gray-500 truncate">{student.email || 'No email'}</p>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-bold text-[#091838] truncate">{student.name}</p>
+                            <p className="text-[10px] text-gray-500 truncate">{student.email || 'No email'}</p>
+                          </div>
+                          {student.is_flagged && (
+                            <Flag className="w-3.5 h-3.5 text-red-600 fill-red-600 shrink-0" />
+                          )}
                         </div>
                       </td>
                         <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -728,6 +770,13 @@ export function AdminPanel({ onNavigateToFrontend }: AdminPanelProps) {
                               title="Mark Online"
                             >
                               <Globe className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => toggleFlag(student.id, !!student.is_flagged)}
+                              className={`p-1.5 rounded transition-colors ${student.is_flagged ? 'text-red-600 bg-red-50' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'}`}
+                              title={student.is_flagged ? "Unflag student" : "Flag student"}
+                            >
+                              <Flag className={`w-4 h-4 ${student.is_flagged ? 'fill-current' : ''}`} />
                             </button>
                             <button
                               onClick={() => deleteStudent(student.id, student.name)}
