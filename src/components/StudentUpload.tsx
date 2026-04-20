@@ -73,19 +73,33 @@ export function StudentUpload({ programmes, onClose, onSuccess }: StudentUploadP
         return;
       }
 
-      // Fetch existing students for this programme to check for duplicates by name and email
-      const { data: existingStudents, error: fetchError } = await supabase
+      // Fetch existing students globally to check for duplicates by email
+      const { data: allExistingStudents, error: fetchError } = await supabase
         .from('students')
-        .select('name, email')
-        .eq('programme_id', selectedProgramme);
+        .select('name, email, programme_id');
 
       if (fetchError) throw fetchError;
 
-      const existingSet = new Set(existingStudents?.map(s => `${s.name.toLowerCase().trim()}|${s.email?.toLowerCase().trim() || ''}`) || []);
+      const existingEmails = new Set(
+        allExistingStudents
+          ?.filter(s => s.email)
+          .map(s => s.email?.toLowerCase().trim())
+      );
+      
+      const existingNamesInProg = new Set(
+        allExistingStudents
+          ?.filter(s => s.programme_id === selectedProgramme)
+          .map(s => s.name.toLowerCase().trim())
+      );
       
       const newStudents = students.filter(s => {
-        const key = `${s.name.toLowerCase().trim()}|${s.email?.toLowerCase().trim() || ''}`;
-        return !existingSet.has(key);
+        // Skip if email exists anywhere in the DB
+        if (s.email && existingEmails.has(s.email)) return false;
+        
+        // Skip if exact name exists in the selected programme
+        if (existingNamesInProg.has(s.name.toLowerCase().trim())) return false;
+        
+        return true;
       });
       const duplicateCount = (jsonData.filter(r => r[0]).length) - newStudents.length;
 
