@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { LogOut, Upload, Plus, Trash2, Users, UserCheck, Globe, UserX, Clipboard, Download, ArrowRightLeft, Search, Flag } from 'lucide-react';
+import { LogOut, Upload, Plus, Trash2, Users, UserCheck, Globe, UserX, Clipboard, Download, ArrowRightLeft, Search, Flag, AlertTriangle } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { supabase } from '../lib/supabase';
 import { Week, Programme, Student, Attendance, AttendanceStatus, Cohort } from '../types/database';
@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { StudentUpload } from './StudentUpload';
 import { OnlineAttendanceUpload } from './OnlineAttendanceUpload';
 import { PasteStudents } from './PasteStudents';
+import { FrequentAbsenteesModal } from './FrequentAbsenteesModal';
 
 interface AdminPanelProps {
   onNavigateToFrontend: () => void;
@@ -19,6 +20,7 @@ interface StudentWithDetails extends Student {
     };
   };
   attendance?: Attendance;
+  absentCount?: number;
 }
 
 export function AdminPanel({ onNavigateToFrontend }: AdminPanelProps) {
@@ -35,6 +37,7 @@ export function AdminPanel({ onNavigateToFrontend }: AdminPanelProps) {
   const [showStudentUpload, setShowStudentUpload] = useState(false);
   const [showPasteUpload, setShowPasteUpload] = useState(false);
   const [showAttendanceUpload, setShowAttendanceUpload] = useState(false);
+  const [showAbsencesModal, setShowAbsencesModal] = useState(false);
   const [movingStudentId, setMovingStudentId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -247,10 +250,24 @@ export function AdminPanel({ onNavigateToFrontend }: AdminPanelProps) {
         .eq('week_id', selectedWeek)
         .in('student_id', studentIds);
 
-      const studentsWithAttendance = studentsData.map((student) => ({
-        ...student,
-        attendance: attendanceData?.find((a) => a.student_id === student.id),
-      }));
+      const { data: allAttendanceData } = await supabase
+        .from('attendance')
+        .select('student_id, status')
+        .in('student_id', studentIds);
+
+      const totalWeeks = weeks.length;
+
+      const studentsWithAttendance = studentsData.map((student) => {
+        const studentAllAtt = allAttendanceData?.filter(a => a.student_id === student.id) || [];
+        const presentCount = studentAllAtt.filter(a => a.status !== 'ABSENT').length;
+        const absentCount = totalWeeks - presentCount;
+
+        return {
+          ...student,
+          attendance: attendanceData?.find((a) => a.student_id === student.id),
+          absentCount
+        };
+      });
 
       setStudents(studentsWithAttendance);
     }
@@ -599,6 +616,13 @@ export function AdminPanel({ onNavigateToFrontend }: AdminPanelProps) {
                 <Download className="w-4 h-4" />
                 Export Attendance
               </button>
+              <button
+                onClick={() => setShowAbsencesModal(true)}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors shadow-sm"
+              >
+                <AlertTriangle className="w-4 h-4" />
+                3+ Absences
+              </button>
               {selectedStudentIds.size > 0 && (
                 <button
                   onClick={deleteSelectedStudents}
@@ -702,6 +726,11 @@ export function AdminPanel({ onNavigateToFrontend }: AdminPanelProps) {
                           </div>
                           {student.is_flagged && (
                             <Flag className="w-3.5 h-3.5 text-red-600 fill-red-600 shrink-0" />
+                          )}
+                          {student.absentCount !== undefined && student.absentCount >= 3 && (
+                            <span className="px-1.5 py-0.5 bg-red-100 text-red-700 text-[10px] font-bold rounded whitespace-nowrap shrink-0" title={`${student.absentCount} total absences`}>
+                              {student.absentCount} Absences
+                            </span>
                           )}
                         </div>
                       </td>
@@ -826,6 +855,13 @@ export function AdminPanel({ onNavigateToFrontend }: AdminPanelProps) {
               setShowAttendanceUpload(false);
               loadStudents();
             }}
+          />
+        )}
+
+        {showAbsencesModal && (
+          <FrequentAbsenteesModal
+            students={students}
+            onClose={() => setShowAbsencesModal(false)}
           />
         )}
       </div>
