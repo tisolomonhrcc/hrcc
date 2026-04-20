@@ -40,7 +40,8 @@ export function PasteStudents({ onClose, onSuccess, selectedProgramme }: PasteSt
         const columns = row.split(/\t|,/);
         if (columns.length >= 1) {
           const name = columns[0].trim();
-          const email = columns[1] ? columns[1].trim().toLowerCase() : null;
+          let email = columns[1] ? columns[1].trim().toLowerCase() : null;
+          if (email === '') email = null;
 
           if (name) {
             if (email && seenEmailsInPaste.has(email)) continue;

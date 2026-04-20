@@ -54,7 +54,8 @@ export function StudentUpload({ programmes, onClose, onSuccess }: StudentUploadP
         const row = jsonData[i];
         if (row[0]) {
           const name = String(row[0]).trim();
-          const email = row[1] ? String(row[1]).trim().toLowerCase() : null;
+          let email = row[1] ? String(row[1]).trim().toLowerCase() : null;
+          if (email === '') email = null;
           
           if (name) {
             // Only check for duplicates if email is provided
