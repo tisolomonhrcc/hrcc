@@ -252,20 +252,22 @@ export function AdminPanel({ onNavigateToFrontend }: AdminPanelProps) {
 
       const { data: allAttendanceData } = await supabase
         .from('attendance')
-        .select('student_id, status')
+        .select('student_id, status, week_id')
         .in('student_id', studentIds);
 
-      const totalWeeks = weeks.length;
+      // Find unique weeks that actually have attendance records for the selected cohort/programme
+      const activeWeeks = new Set(allAttendanceData?.map(a => a.week_id) || []);
+      const totalActiveWeeks = activeWeeks.size;
 
       const studentsWithAttendance = studentsData.map((student) => {
         const studentAllAtt = allAttendanceData?.filter(a => a.student_id === student.id) || [];
         const presentCount = studentAllAtt.filter(a => a.status !== 'ABSENT').length;
-        const absentCount = totalWeeks - presentCount;
+        const absentCount = totalActiveWeeks - presentCount;
 
         return {
           ...student,
           attendance: attendanceData?.find((a) => a.student_id === student.id),
-          absentCount
+          absentCount: Math.max(0, absentCount) // ensure it doesn't go below 0
         };
       });
 
